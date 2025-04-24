@@ -3,6 +3,7 @@ import praw
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup, Comment
+import io
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Reddit Comment + Box Score Scraper", layout="centered")
@@ -144,9 +145,18 @@ if box_url and st.button("Scrape Box Score"):
 if st.button("Generate Prefilled AI Prompt"):
     st.subheader("Generated AI Prompt")
     game_context = "[Paste game summary here]"
-    comments_preview = df[['username', 'comment_text']].head(5).to_csv(index=False) if not df.empty else "(No comments scraped yet)"
-    box_preview = score_df.to_csv(index=False) if not score_df.empty else "(No team scores scraped yet)"
-    player_preview = players_df[['team', 'player', 'PTS', 'REB', 'AST']].head(5).to_csv(index=False) if not players_df.empty else "(No player stats scraped yet)"
+
+    comments_buffer = io.StringIO()
+    df[['username', 'comment_text']].head(5).to_csv(comments_buffer, index=False)
+    comments_preview = comments_buffer.getvalue() if not df.empty else "(No comments scraped yet)"
+
+    box_buffer = io.StringIO()
+    score_df.to_csv(box_buffer, index=False)
+    box_preview = box_buffer.getvalue() if not score_df.empty else "(No team scores scraped yet)"
+
+    players_buffer = io.StringIO()
+    players_df[['team', 'player', 'PTS', 'REB', 'AST']].head(5).to_csv(players_buffer, index=False)
+    player_preview = players_buffer.getvalue() if not players_df.empty else "(No player stats scraped yet)"
 
     prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction story powered by real Reddit comments and box score data. You will generate a 400–500 word article that captures the community’s sentiment, key game takeaways, and standout performances.
 
@@ -176,4 +186,4 @@ Follow this format:
 
 Use a casual yet editorial tone. Quote fans naturally (“One fan wrote…”). Do not fabricate anything — use only the content provided."""
 
-    st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=600)
+    st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=700)
