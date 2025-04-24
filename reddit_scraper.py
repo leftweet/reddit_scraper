@@ -84,45 +84,50 @@ if st.session_state.scraped:
     if st.button("Generate Prompt"):
         thread_titles_text = "\n- " + "\n- ".join(st.session_state.comment_threads)
 
-        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article based on Reddit commentary and a separate game context file.
+        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article using only the supplied CSV and game context file.
 
-Here is what you’re working with:
+You have three sources of information:
 
-1. Fan Commentary (CSV):
-You have a CSV file named comments.csv. Each row represents a top-level Reddit comment. The columns include:
-- thread_title: the title of the Reddit post (game or topic related)
-- username: the Redditor's handle
-- comment_text: their full comment
-- upvotes: how many upvotes the comment received
-- permalink: the full Reddit link to the comment
+1. comments.csv
+This file contains Reddit fan comments. Each row includes:
+- thread_title
+- username
+- comment_text (the full fan comment)
+- upvotes
+- permalink
 
-These comments came from the following Reddit threads:
-{thread_titles_text}
+These are the ONLY fan quotes you are allowed to use.
+You may:
+- Use them verbatim
+- Paraphrase them conservatively (the meaning must remain exactly the same)
+You may NOT:
+- Create new quotes
+- Invent phrasing that does not exist in the comment_text
+- Imply sentiment beyond what the comment actually says
 
-2. Game Context (TXT):
-You have a file named game_context.txt. It contains a text summary of the game from a Reddit post thread. Use this as the factual basis for game flow, player stats, and team performance. Do not fabricate any game events or results.
+If you want to include a quote in the article, it must come directly from a row in the CSV.
 
-3. Optional Images:
-The user may upload relevant images — including memes, screenshots, or visual reactions from Reddit — into this prompt thread. If so, examine these images to infer tone, sentiment, or context that complements the written comments.
+2. game_context.txt
+This is a factual summary of the game. It includes score, player stats, and game flow. You may ONLY refer to players, events, or stats mentioned in this file.
+
+3. Optional Images
+You may have uploaded memes or Reddit screenshots. Use these only to support tone or sentiment, not as factual sources. Do not extract or invent text from them.
 
 Your task is to write a 400–500 word article titled:
 **From the Stands: [TEAM] Fans React to [EVENT]**
 
-Tone & Voice:
-- Conversational and editorial
-- Capture the mood and emotional vibe of the fans
-- Use select direct quotes (attribute naturally, like “One fan wrote...”)
-- Don’t overexplain or repeat what’s already obvious from the data
+Instructions:
+- Start with a 1-paragraph fan reaction summary
+- Then create 2–3 sections (reactions to players, moments, coaching)
+- End with a conclusion about how fans feel going forward
 
-Structure:
-- Start with a short, energetic intro paragraph summarizing how fans felt after the game
-- Then build out 2–3 sections:
-  - What themes or takeaways came up repeatedly?
-  - How did fans react to key players or moments?
-  - Was there praise, concern, frustration, optimism?
-- End with a conclusion paragraph reflecting how the fanbase is feeling going forward
+Tone:
+- Conversational, polished, and journalistic
+- Quote fans naturally (e.g. “One user commented…”)
+- Use quotes for flavor, not filler
+- Do not exaggerate sentiment or speculate
 
-When you are done, return the article as plain text and format it for download as a .txt file."""
+Return the article as a plain text .txt file."""
 
         st.subheader("Generated AI Prompt")
         st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=700)
