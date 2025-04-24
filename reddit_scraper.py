@@ -2,7 +2,7 @@ import streamlit as st
 import praw
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Reddit Comment + Box Score Scraper", layout="centered")
@@ -55,26 +55,33 @@ def scrape_bref_box_score(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        linescore_table = soup.find("table", id="line_score")
-        rows = linescore_table.find_all("tr")
+        # Look inside HTML comments for the box score table
+        comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+        for comment in comments:
+            comment_soup = BeautifulSoup(comment, "html.parser")
+            linescore_table = comment_soup.find("table", id="line_score")
+            if linescore_table:
+                rows = linescore_table.find_all("tr")
+                structured_data = []
+                for row in rows[1:]:
+                    cells = row.find_all("td")
+                    if len(cells) >= 5:
+                        team = row.find("a").text if row.find("a") else "Unknown"
+                        q_scores = [cell.text for cell in cells[:4]]
+                        total = cells[4].text
+                        structured_data.append({
+                            "team": team,
+                            "Q1": q_scores[0],
+                            "Q2": q_scores[1],
+                            "Q3": q_scores[2],
+                            "Q4": q_scores[3],
+                            "Total": total
+                        })
+                return pd.DataFrame(structured_data)
 
-        structured_data = []
-        for row in rows[1:]:
-            cells = row.find_all("td")
-            if len(cells) >= 6:
-                team = row.find("a").text if row.find("a") else "Unknown"
-                q_scores = [cell.text for cell in cells[:4]]
-                total = cells[4].text
-                structured_data.append({
-                    "team": team,
-                    "Q1": q_scores[0],
-                    "Q2": q_scores[1],
-                    "Q3": q_scores[2],
-                    "Q4": q_scores[3],
-                    "Total": total
-                })
+        st.error("No box score table found in comments.")
+        return pd.DataFrame()
 
-        return pd.DataFrame(structured_data)
     except Exception as e:
         st.error(f"Basketball-Reference scrape failed: {e}")
         return pd.DataFrame()
