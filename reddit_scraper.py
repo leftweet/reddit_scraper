@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Comment
 # --- Streamlit UI ---
 st.set_page_config(page_title="Reddit Comment + Box Score Scraper", layout="centered")
 st.title("Reddit Comment + Box Score Scraper")
-st.write("Paste in Reddit thread URLs and optionally a Basketball-Reference box score URL. Extract comments and structured box score data.")
+st.write("Paste in Reddit thread URLs and optionally a Basketball-Reference box score URL. Extract comments, team scores, and player stats.")
 
 # --- Reddit API Credentials ---
 client_id = st.secrets["client_id"]
@@ -55,8 +55,9 @@ def scrape_bref_box_score(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # Look inside HTML comments for the box score table
+        # Extract team score summary
         comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+        score_df = pd.DataFrame()
         for comment in comments:
             comment_soup = BeautifulSoup(comment, "html.parser")
             linescore_table = comment_soup.find("table", id="line_score")
@@ -77,14 +78,31 @@ def scrape_bref_box_score(url):
                             "Q4": q_scores[3],
                             "Total": total
                         })
-                return pd.DataFrame(structured_data)
+                score_df = pd.DataFrame(structured_data)
 
-        st.error("No box score table found in comments.")
-        return pd.DataFrame()
+        # Extract player stats from box-* tables
+        player_stats = []
+        for comment in comments:
+            comment_soup = BeautifulSoup(comment, "html.parser")
+            for table in comment_soup.find_all("table"):
+                if table.get("id") and "box" in table.get("id") and "basic" in table.get("id"):
+                    team = table.get("id").split("-")[1].upper()
+                    rows = table.find_all("tr", class_=lambda x: x != 'thead')
+                    headers = [th.text for th in table.find_all("thead")[0].find_all("th")][1:]  # skip first (blank)
+                    for row in rows:
+                        cells = row.find_all("td")
+                        if not cells:
+                            continue
+                        player = row.find("th").text.strip()
+                        stats = [cell.text.strip() for cell in cells]
+                        player_stats.append(dict(zip(["team", "player"] + headers, [team, player] + stats)))
+
+        players_df = pd.DataFrame(player_stats)
+        return score_df, players_df
 
     except Exception as e:
         st.error(f"Basketball-Reference scrape failed: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
 
 # --- Scrape Comments Button ---
 if urls_input and st.button("Scrape Reddit Comments"):
@@ -100,11 +118,19 @@ if urls_input and st.button("Scrape Reddit Comments"):
 
 # --- Scrape Box Score Button ---
 if box_url and st.button("Scrape Box Score"):
-    box_df = scrape_bref_box_score(box_url)
-    if not box_df.empty:
+    score_df, players_df = scrape_bref_box_score(box_url)
+    if not score_df.empty:
         st.success("Box score extracted successfully!")
-        st.dataframe(box_df)
-        box_csv = box_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Box Score CSV", box_csv, "box_score.csv", "text/csv")
-    else:
-        st.warning("Box score not found or failed to parse.")
+        st.subheader("Team Score Summary")
+        st.dataframe(score_df)
+        score_csv = score_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Team Box CSV", score_csv, "box_score.csv", "text/csv")
+
+    if not players_df.empty:
+        st.subheader("Player Stats")
+        st.dataframe(players_df)
+        players_csv = players_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Player Stats CSV", players_csv, "player_stats.csv", "text/csv")
+
+    if score_df.empty and players_df.empty:
+        st.warning("No box score data found or failed to parse.")
