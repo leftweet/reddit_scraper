@@ -77,21 +77,19 @@ if st.session_state.scraped:
 
     if st.session_state.game_context:
         st.subheader("Game Context")
-        st.text_area("This text can be pasted into your AI prompt for game context:", value=st.session_state.game_context, height=400)
+        st.text_area("Game context (for reference):", value=st.session_state.game_context, height=400)
+        game_txt = st.session_state.game_context.encode('utf-8')
+        st.download_button("Download Game Context TXT", game_txt, "game_context.txt", "text/plain")
 
     if st.button("Generate Prompt"):
-        context_sample = st.session_state.game_context or "(No game context)"
         thread_titles_text = "\n- " + "\n- ".join(st.session_state.comment_threads)
 
-        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article based on Reddit commentary and the official post-game thread.
+        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article based on Reddit commentary and a separate game context file.
 
 Here is what you’re working with:
 
-1. Game Context (Text):
-{context_sample}
-
-2. Fan Commentary (CSV):
-You also have a CSV file named comments.csv. Each row represents a top-level Reddit comment. The columns include:
+1. Fan Commentary (CSV):
+You have a CSV file named comments.csv. Each row represents a top-level Reddit comment. The columns include:
 - thread_title: the title of the Reddit post (game or topic related)
 - username: the Redditor's handle
 - comment_text: their full comment
@@ -101,21 +99,22 @@ You also have a CSV file named comments.csv. Each row represents a top-level Red
 These comments came from the following Reddit threads:
 {thread_titles_text}
 
-Please read and analyze both the content of the comments and the context provided by the thread titles. The titles often signal whether the thread is a game recap, reaction, or specific moment of interest. Use that context to better understand the tone and focus of the community's reactions.
+2. Game Context (TXT):
+You have a file named game_context.txt. It contains a text summary of the game from a Reddit post thread. Use this as the factual basis for game flow, player stats, and team performance. Do not fabricate any game events or results.
 
-3. Attached Images (Optional):
-The user may upload relevant images — including memes, screenshots, or visual reactions from Reddit — into this prompt thread. If so, examine these images to infer tone, sentiment, or context that complements the written comments. For example, celebratory memes, sarcastic visuals, or emotional screenshots may reinforce how fans are feeling.
+3. Optional Images:
+The user may upload relevant images — including memes, screenshots, or visual reactions from Reddit — into this prompt thread. If so, examine these images to infer tone, sentiment, or context that complements the written comments.
 
 Your task is to write a 400–500 word article titled:
 **From the Stands: [TEAM] Fans React to [EVENT]**
 
-### Tone & Voice:
+Tone & Voice:
 - Conversational and editorial
 - Capture the mood and emotional vibe of the fans
 - Use select direct quotes (attribute naturally, like “One fan wrote...”)
 - Don’t overexplain or repeat what’s already obvious from the data
 
-### Content Structure:
+Structure:
 - Start with a short, energetic intro paragraph summarizing how fans felt after the game
 - Then build out 2–3 sections:
   - What themes or takeaways came up repeatedly?
@@ -123,9 +122,7 @@ Your task is to write a 400–500 word article titled:
   - Was there praise, concern, frustration, optimism?
 - End with a conclusion paragraph reflecting how the fanbase is feeling going forward
 
-Only use the information in the context, the CSV, and the attached images. Do not fabricate any fan reactions. Do not introduce facts that are not mentioned.
-
-Ready to write?"""
+When you are done, return the article as plain text and format it for download as a .txt file."""
 
         st.subheader("Generated AI Prompt")
         st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=700)
