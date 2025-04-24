@@ -75,18 +75,44 @@ if st.session_state.scraped:
         st.text_area("This text can be pasted into your AI prompt for game context:", value=st.session_state.game_context, height=400)
 
     if st.button("Generate Prompt"):
-        comments_sample = st.session_state.comments_df[['username', 'comment_text']].head(5).to_csv(index=False) if not st.session_state.comments_df.empty else "(No comments)"
         context_sample = st.session_state.game_context or "(No game context)"
 
-        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction story powered by real Reddit comments and post-game thread data.
+        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article based on Reddit commentary and the official post-game thread.
 
-1. Game Context:
+Here is what you’re working with:
+
+1. Game Context (Text):
 {context_sample}
 
-2. Fan Quotes Preview:
-{comments_sample}
+2. Fan Commentary (CSV):
+You also have a CSV file named comments.csv. Each row represents a top-level Reddit comment. The columns include:
+- username: the Redditor's handle
+- comment_text: their full comment
+- upvotes: how many upvotes the comment received
+- permalink: the full Reddit link to the comment
 
-Write a 400–500 word article capturing fan sentiment and key game reactions. Title it: 'From the Stands: [TEAM] Fans React to [EVENT]'. Use direct quotes and highlight standout themes or performances. Maintain a lively, editorial tone."""
+Some of the comments are insightful, emotional, funny, or detailed. Others are short reactions or basic support/critique. Use your judgment when selecting quotes to include or paraphrase.
+
+Your task is to write a 400–500 word article titled:
+**From the Stands: [TEAM] Fans React to [EVENT]**
+
+### Tone & Voice:
+- Conversational and editorial
+- Capture the mood and emotional vibe of the fans
+- Use select direct quotes (attribute naturally, like “One fan wrote...”)
+- Don’t overexplain or repeat what’s already obvious from the data
+
+### Content Structure:
+- Start with a short, energetic intro paragraph summarizing how fans felt after the game
+- Then build out 2–3 sections:
+  - What themes or takeaways came up repeatedly?
+  - How did fans react to key players or moments?
+  - Was there praise, concern, frustration, optimism?
+- End with a conclusion paragraph reflecting how the fanbase is feeling going forward
+
+Only use the information in the context and the CSV. Do not fabricate any fan reactions. Do not introduce facts that are not mentioned.
+
+Ready to write?"""
 
         st.subheader("Generated AI Prompt")
-        st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=600)
+        st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=700)
