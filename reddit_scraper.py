@@ -3,8 +3,8 @@ import praw
 import pandas as pd
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Reddit Comment Scraper", layout="centered")
-st.title("Reddit Comment Scraper")
+st.set_page_config(page_title="Reddit Fan Reaction Builder", layout="centered")
+st.title("Fan Reaction Article Builder")
 
 # --- Reddit API Credentials ---
 client_id = st.secrets["client_id"]
@@ -62,7 +62,7 @@ if urls_input.strip() and game_thread_url.strip():
         st.session_state.game_context = fetch_game_context(game_thread_url)
         st.session_state.scraped = True
 
-# --- Show Prompt Results ---
+# --- Show Results ---
 if st.session_state.scraped:
     if not st.session_state.comments_df.empty:
         st.subheader("Fan Comments")
@@ -72,14 +72,14 @@ if st.session_state.scraped:
         st.subheader("Game Context")
         st.text_area("Fetched game context:", value=st.session_state.game_context, height=300)
 
-    if st.button("Generate Prompt"):
-        # Format fan quotes for prompt
-        formatted_quotes = ""
-        for _, row in st.session_state.comments_df.iterrows():
-            formatted_quotes += f'"{row["comment_text"]}" — from "{row["thread_title"]}"\n'
+    # Format fan quotes for both prompts
+    formatted_quotes = ""
+    for _, row in st.session_state.comments_df.iterrows():
+        formatted_quotes += f'"{row["comment_text"]}" — from "{row["thread_title"]}"\n'
 
-        # Prompt string
-        prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article using ONLY the comments and game context below.
+    # --- Article Generation Prompt ---
+    if st.button("Generate Article Prompt"):
+        article_prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article using ONLY the comments and game context below.
 
 You must follow these strict editorial rules:
 
@@ -116,5 +116,33 @@ Tone:
 
 When you are finished, return the article as plain text suitable for download as a .txt file."""
 
-        st.subheader("Generated AI Prompt")
-        st.text_area("Copy this prompt into ChatGPT:", value=prompt, height=800)
+        st.subheader("Generated Article Prompt")
+        st.text_area("Copy this prompt into ChatGPT:", value=article_prompt, height=800)
+
+    # --- Fact-Checking Prompt ---
+    if st.button("Generate Fact-Checking Prompt"):
+        fact_check_prompt = f"""Hi ChatGPT — you are acting as a newsroom fact-checker for an AI-generated sports article. You will verify that the article only uses the data provided below and contains no fabricated content.
+
+You have the following materials:
+
+1. Fan Quotes:
+{formatted_quotes}
+
+2. Game Context:
+{st.session_state.game_context}
+
+Fact-checking Instructions:
+
+- Quotes: Are all quotes in the article taken directly from the quotes above? Do not allow any quote that does not appear verbatim or clearly paraphrased.
+- Stats and game details: Are all stats and descriptions found in the game context? If not, flag them.
+- Tone: Does the article reflect the sentiment of the fan quotes? Avoid exaggerated optimism or drama not supported by the material.
+- Structure: Is the article structured logically (lead, body, conclusion)?
+- Fabrication: Flag any information not supported by the provided context or quotes.
+
+Be specific. Flag errors, give suggested edits, and finish with a verdict:
+Pass / Needs Edits / Fail.
+
+Reminder: This is a real editorial check. No hallucination is acceptable."""
+
+        st.subheader("Generated Fact-Checking Prompt")
+        st.text_area("Copy this fact-check prompt into ChatGPT:", value=fact_check_prompt, height=800)
