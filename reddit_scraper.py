@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Comment
 # --- Streamlit UI ---
 st.set_page_config(page_title="Reddit Comment + Box Score Scraper", layout="centered")
 st.title("Reddit Comment + Box Score Scraper")
-st.write("Paste in Reddit thread URLs and optionally a Basketball-Reference box score URL. Extract comments, team scores, and player stats.")
+st.write("Paste in Reddit thread URLs and optionally a Basketball-Reference box score URL. Extract comments, team scores, player stats, and generate a structured AI prompt.")
 
 # --- Reddit API Credentials ---
 client_id = st.secrets["client_id"]
@@ -88,7 +88,7 @@ def scrape_bref_box_score(url):
                 if table.get("id") and "box" in table.get("id") and "basic" in table.get("id"):
                     team = table.get("id").split("-")[1].upper()
                     rows = table.find_all("tr", class_=lambda x: x != 'thead')
-                    headers = [th.text for th in table.find_all("thead")[0].find_all("th")][1:]  # skip first (blank)
+                    headers = [th.text for th in table.find_all("thead")[0].find_all("th")][1:]
                     for row in rows:
                         cells = row.find_all("td")
                         if not cells:
@@ -134,3 +134,43 @@ if box_url and st.button("Scrape Box Score"):
 
     if score_df.empty and players_df.empty:
         st.warning("No box score data found or failed to parse.")
+
+# --- Prefilled AI Prompt Template ---
+st.subheader("AI Prompt Template: Generate Fan Reaction Article")
+st.text_area("Copy and paste this into ChatGPT or another LLM tool:", value="""Hi ChatGPT — you are helping a sports journalist write a fan reaction story powered by real Reddit comments and box score data. You will generate a 400–500 word article that captures the community’s sentiment, key game takeaways, and standout performances.
+
+Here’s what you’re working with:
+
+1. Game Context:
+[Paste in a short game summary or key facts — score, playoff implications, etc.]
+
+2. Fan Quotes (CSV):
+This CSV contains real top-level Reddit comments. The columns are:
+- username
+- comment_text
+- upvotes
+- thread_url
+Use this to understand the fanbase’s vibe, key discussion points, emotional tone, and highlight quotes. Quote or paraphrase accurately.
+
+3. Team Box Score (CSV):
+This CSV contains quarter-by-quarter scores and final totals. The columns are:
+- team, Q1, Q2, Q3, Q4, Total
+Use this to support comments about momentum, scoring gaps, or how a team held or lost a lead.
+
+4. Player Stats (CSV):
+This CSV includes individual player lines from both teams. The columns include:
+- team, player, and typical stat fields like PTS, REB, AST, MIN, +/-, etc.
+Use this to highlight standout player performances, support fan praise or critiques, and identify statistical leaders.
+
+Your Task:
+Write an article titled:
+From the Stands: [TEAM] Fans React to [EVENT or OPPONENT]
+
+Follow this format:
+- Intro paragraph: Set the emotional tone from fans. What was the vibe after the game?
+- Sentiment section(s): What themes emerged? Praise, criticism, tension? Use direct fan quotes.
+- Player highlights: Pull 1–2 standout stat lines from the player stats CSV and connect to what fans said.
+- Game rhythm: Use the team box score to describe the momentum and any big shifts.
+- Conclusion: Reflect how the fanbase feels heading into the next game or moment.
+
+Use a casual yet editorial tone. Quote fans naturally (“One fan wrote…”). Do not fabricate anything — use only the content provided.""", height=600)
