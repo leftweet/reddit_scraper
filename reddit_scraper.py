@@ -103,6 +103,9 @@ These comments came from the following Reddit threads:
 
 Please read and analyze both the content of the comments and the context provided by the thread titles. The titles often signal whether the thread is a game recap, reaction, or specific moment of interest. Use that context to better understand the tone and focus of the community's reactions.
 
+3. Attached Images (Optional):
+The user may upload relevant images — including memes, screenshots, or visual reactions from Reddit — into this prompt thread. If so, examine these images to infer tone, sentiment, or context that complements the written comments. For example, celebratory memes, sarcastic visuals, or emotional screenshots may reinforce how fans are feeling.
+
 Your task is to write a 400–500 word article titled:
 **From the Stands: [TEAM] Fans React to [EVENT]**
 
@@ -120,7 +123,7 @@ Your task is to write a 400–500 word article titled:
   - Was there praise, concern, frustration, optimism?
 - End with a conclusion paragraph reflecting how the fanbase is feeling going forward
 
-Only use the information in the context and the CSV. Do not fabricate any fan reactions. Do not introduce facts that are not mentioned.
+Only use the information in the context, the CSV, and the attached images. Do not fabricate any fan reactions. Do not introduce facts that are not mentioned.
 
 Ready to write?"""
 
