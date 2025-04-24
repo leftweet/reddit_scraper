@@ -21,6 +21,8 @@ if 'comments_df' not in st.session_state:
     st.session_state.comments_df = pd.DataFrame()
 if 'game_context' not in st.session_state:
     st.session_state.game_context = ""
+if 'comment_threads' not in st.session_state:
+    st.session_state.comment_threads = []
 if 'scraped' not in st.session_state:
     st.session_state.scraped = False
 
@@ -28,13 +30,16 @@ if 'scraped' not in st.session_state:
 def extract_comments_from_urls(urls, limit):
     reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
     all_comments = []
+    thread_titles = []
     for url in urls:
         try:
             submission = reddit.submission(url=url.strip())
+            thread_titles.append(submission.title)
             submission.comments.replace_more(limit=0)
             comments = submission.comments[:limit]
             for comment in comments:
                 all_comments.append({
+                    "thread_title": submission.title,
                     "thread_url": url,
                     "username": comment.author.name if comment.author else "[deleted]",
                     "comment_text": comment.body,
@@ -43,7 +48,7 @@ def extract_comments_from_urls(urls, limit):
                 })
         except Exception as e:
             st.error(f"Failed to fetch from {url.strip()}: {e}")
-    return pd.DataFrame(all_comments)
+    return pd.DataFrame(all_comments), thread_titles
 
 def fetch_game_context(url):
     try:
@@ -58,7 +63,7 @@ def fetch_game_context(url):
 if urls_input.strip() and game_thread_url.strip():
     if st.button("Scrape Reddit"):
         urls = urls_input.strip().splitlines()
-        st.session_state.comments_df = extract_comments_from_urls(urls, limit)
+        st.session_state.comments_df, st.session_state.comment_threads = extract_comments_from_urls(urls, limit)
         st.session_state.game_context = fetch_game_context(game_thread_url)
         st.session_state.scraped = True
 
@@ -76,6 +81,7 @@ if st.session_state.scraped:
 
     if st.button("Generate Prompt"):
         context_sample = st.session_state.game_context or "(No game context)"
+        thread_titles_text = "\n- " + "\n- ".join(st.session_state.comment_threads)
 
         prompt = f"""Hi ChatGPT — you are helping a sports journalist write a fan reaction article based on Reddit commentary and the official post-game thread.
 
@@ -86,12 +92,16 @@ Here is what you’re working with:
 
 2. Fan Commentary (CSV):
 You also have a CSV file named comments.csv. Each row represents a top-level Reddit comment. The columns include:
+- thread_title: the title of the Reddit post (game or topic related)
 - username: the Redditor's handle
 - comment_text: their full comment
 - upvotes: how many upvotes the comment received
 - permalink: the full Reddit link to the comment
 
-Some of the comments are insightful, emotional, funny, or detailed. Others are short reactions or basic support/critique. Use your judgment when selecting quotes to include or paraphrase.
+These comments came from the following Reddit threads:
+{thread_titles_text}
+
+Please read and analyze both the content of the comments and the context provided by the thread titles. The titles often signal whether the thread is a game recap, reaction, or specific moment of interest. Use that context to better understand the tone and focus of the community's reactions.
 
 Your task is to write a 400–500 word article titled:
 **From the Stands: [TEAM] Fans React to [EVENT]**
